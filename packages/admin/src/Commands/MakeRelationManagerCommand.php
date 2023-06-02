@@ -2,8 +2,10 @@
 
 namespace Filament\Commands;
 
+use Filament\Forms\Commands\Concerns\CanGenerateForms;
 use Filament\Support\Commands\Concerns\CanIndentStrings;
 use Filament\Support\Commands\Concerns\CanManipulateFiles;
+use Filament\Support\Commands\Concerns\CanReadModelSchemas;
 use Filament\Support\Commands\Concerns\CanValidateInput;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
@@ -13,44 +15,47 @@ class MakeRelationManagerCommand extends Command
     use CanIndentStrings;
     use CanManipulateFiles;
     use CanValidateInput;
+    use CanGenerateForms;
+    use CanReadModelSchemas;
 
     protected $description = 'Create a new Filament relation manager class for a resource';
 
-    protected $signature = 'make:filament-relation-manager {resource?} {relationship?} {recordTitleAttribute?} {--attach} {--associate} {--soft-deletes} {--view} {--F|force}';
+    protected $signature = 'make:filament-relation-manager {resource?} {relationship?} {model?} {recordTitleAttribute?} {--attach} {--associate} {--soft-deletes} {--view} {--F|force}';
 
+//    protected $signature = 'make:filament-relation-manager {resource?} {relationship?} {model?} {recordTitleAttribute?} {--attach} {--associate} {--soft-deletes} {--view} {--F|force}';
     public function handle(): int
     {
         $resourcePath = config('filament.resources.path', app_path('Filament/Resources/'));
         $resourceNamespace = config('filament.resources.namespace', 'App\\Filament\\Resources');
 
-        $resource = (string) Str::of($this->argument('resource') ?? $this->askRequired('Resource (e.g. `DepartmentResource`)', 'resource'))
+        $resource = (string)Str::of($this->argument('resource') ?? $this->askRequired('Resource (e.g. `DepartmentResource`)', 'resource'))
             ->studly()
             ->trim('/')
             ->trim('\\')
             ->trim(' ')
             ->replace('/', '\\');
 
-        if (! Str::of($resource)->endsWith('Resource')) {
+        if (!Str::of($resource)->endsWith('Resource')) {
             $resource .= 'Resource';
         }
 
-        $relationship = (string) Str::of($this->argument('relationship') ?? $this->askRequired('Relationship (e.g. `members`)', 'relationship'))
+        $relationship = (string)Str::of($this->argument('relationship') ?? $this->askRequired('Relationship (e.g. `members`)', 'relationship'))
             ->trim(' ');
-        $managerClass = (string) Str::of($relationship)
+        $managerClass = (string)Str::of($relationship)
             ->studly()
             ->append('RelationManager');
 
-        $recordTitleAttribute = (string) Str::of($this->argument('recordTitleAttribute') ?? $this->askRequired('Title attribute (e.g. `name`)', 'title attribute'))
+        $recordTitleAttribute = (string)Str::of($this->argument('recordTitleAttribute') ?? $this->askRequired('Title attribute (e.g. `name`)', 'title attribute'))
             ->trim(' ');
 
-        $path = (string) Str::of($managerClass)
+        $path = (string)Str::of($managerClass)
             ->prepend("{$resourcePath}/{$resource}/RelationManagers/")
             ->replace('\\', '/')
             ->append('.php');
 
-        if (! $this->option('force') && $this->checkForCollision([
-            $path,
-        ])) {
+        if (!$this->option('force') && $this->checkForCollision([
+                $path,
+            ])) {
             return static::INVALID;
         }
 
@@ -122,8 +127,30 @@ class MakeRelationManagerCommand extends Command
 
         $tableBulkActions = implode(PHP_EOL, $tableBulkActions);
 
+        $model = (string)Str::of($this->argument('model'))
+            ->studly()
+            ->beforeLast('Resource')
+            ->trim('/')
+            ->trim('\\')
+            ->trim(' ')
+            ->studly()
+            ->replace('/', '\\');
+
+        if (blank($model)) {
+            $model = 'Resource';
+        }
+
+        $modelClass = (string)Str::of($model)->afterLast('\\');
+        $modelNamespace = Str::of($model)->contains('\\') ?
+            (string)Str::of($model)->beforeLast('\\') :
+            '';
+
+
+        $formSchema = $this->indentString($this->getResourceFormSchema('App\\Models' . ($modelNamespace !== '' ? "\\{$modelNamespace}" : '') . '\\' . $modelClass,), 4);
+//        $formSchema = '';
         $this->copyStubToApp('RelationManager', $path, [
             'eloquentQuery' => $this->indentString($eloquentQuery, 1),
+            'formSchema' => $formSchema,
             'namespace' => "{$resourceNamespace}\\{$resource}\\RelationManagers",
             'managerClass' => $managerClass,
             'recordTitleAttribute' => $recordTitleAttribute,
