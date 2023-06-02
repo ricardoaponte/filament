@@ -46,7 +46,14 @@ if (!function_exists('Filament\Support\prepare_inherited_attributes')) {
 if (!function_exists('Filament\Support\get_column_property')) {
     function get_column_property($column, $property)
     {
-        $properties = json_decode($column->getComment());
+        if (!$column->getComment()) {
+            return null;
+        }
+        try {
+            $properties = json_decode($column->getComment(), false, 512, JSON_THROW_ON_ERROR);
+        } catch (\Exception $e) {
+            throw new \Exception('Invalid JSON in column ' . $column->getName() . ' comment: ' . $column->getComment());
+        }
         if ($properties && property_exists($properties, $property) && $properties->{$property} === true) {
             return $properties;
         }
@@ -69,7 +76,6 @@ if (!function_exists('Filament\Support\get_model_relationships')) {
 
             try {
                 $return = $method->invoke($model);
-
                 if ($return instanceof Relation) {
                     $relationships[$method->getName()] = [
                         'type' => (new ReflectionClass($return))->getShortName(),
