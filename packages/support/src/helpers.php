@@ -2,7 +2,6 @@
 
 namespace Filament\Support;
 
-use ErrorException;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Str;
 use Illuminate\Translation\MessageSelector;
@@ -62,8 +61,9 @@ if (!function_exists('Filament\Support\get_model_relationships')) {
     function get_model_relationships($model): array
     {
         $relationships = [];
-        foreach ((new ReflectionClass($model))->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
-            if ($method->class != get_parent_class($model)) {
+        $methods = (new ReflectionClass($model))->getMethods(ReflectionMethod::IS_PUBLIC);
+        foreach ($methods as $method) {
+            if ($method->isStatic() || $method->getNumberOfParameters() > 0) {
                 continue;
             }
 
@@ -76,7 +76,7 @@ if (!function_exists('Filament\Support\get_model_relationships')) {
                         'model' => (new ReflectionClass($return->getRelated()))->getName()
                     ];
                 }
-            } catch (ErrorException $e) {
+            } catch (\Throwable $e) {
             }
         }
 
