@@ -5,6 +5,7 @@ namespace Filament\Forms\Commands\Concerns;
 use Doctrine\DBAL\Types;
 use Filament\Forms;
 use Illuminate\Support\Str;
+use function Filament\Support\get_column_property;
 
 trait CanGenerateForms
 {
@@ -58,6 +59,14 @@ trait CanGenerateForms
 
                     $componentData['type'] = $type = Forms\Components\Select::class;
                     $componentData['relationship'] = ["'{$guessedRelationshipName}", "{$guessedRelationshipTitleColumnName}'"];
+                    if (get_column_property($column, 'hiddenInForm')?->hiddenInForm === true) {
+                        $componentData['hidden'] = [];
+                        $componentData['saveRelationshipsWhenHidden'] = [];
+                    }
+                    $columnProperty = get_column_property($column, 'default');
+                    if ($columnProperty?->default) {
+                        $componentData['default'] = [$columnProperty->default];
+                    }
                 }
             }
 
@@ -90,7 +99,7 @@ trait CanGenerateForms
 
         foreach ($components as $componentName => $componentData) {
             // Constructor
-            $output .= (string) Str::of($componentData['type'])->after('Filament\\');
+            $output .= (string)Str::of($componentData['type'])->after('Filament\\');
             $output .= '::make(\'';
             $output .= $componentName;
             $output .= '\')';
@@ -110,11 +119,16 @@ trait CanGenerateForms
             // Termination
             $output .= ',';
 
-            if (! (array_key_last($components) === $componentName)) {
+            if (!(array_key_last($components) === $componentName)) {
                 $output .= PHP_EOL;
             }
         }
 
         return $output;
+    }
+
+    protected function getResourceModel(string $model)
+    {
+        return $this->getModelTable($model);
     }
 }

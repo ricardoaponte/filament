@@ -9,7 +9,9 @@ use Filament\Support\Commands\Concerns\CanReadModelSchemas;
 use Filament\Support\Commands\Concerns\CanValidateInput;
 use Filament\Tables\Commands\Concerns\CanGenerateTables;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
+use function Filament\Support\get_model_relationships;
 
 class MakeResourceCommand extends Command
 {
@@ -29,7 +31,7 @@ class MakeResourceCommand extends Command
         $path = config('filament.resources.path', app_path('Filament/Resources/'));
         $namespace = config('filament.resources.namespace', 'App\\Filament\\Resources');
 
-        $model = (string) Str::of($this->argument('name') ?? $this->askRequired('Model (e.g. `BlogPost`)', 'name'))
+        $model = (string)Str::of($this->argument('name') ?? $this->askRequired('Model (e.g. `BlogPost`)', 'name'))
             ->studly()
             ->beforeLast('Resource')
             ->trim('/')
@@ -42,12 +44,26 @@ class MakeResourceCommand extends Command
             $model = 'Resource';
         }
 
-        $modelClass = (string) Str::of($model)->afterLast('\\');
+        $modelClass = (string)Str::of($model)->afterLast('\\');
         $modelNamespace = Str::of($model)->contains('\\') ?
-            (string) Str::of($model)->beforeLast('\\') :
+            (string)Str::of($model)->beforeLast('\\') :
             '';
-        $pluralModelClass = (string) Str::of($modelClass)->pluralStudly();
 
+        $modelName = 'App\\Models' . ($modelNamespace !== '' ? "\\{$modelNamespace}" : '') . '\\' . $modelClass;
+        $modelInstance = new $modelName();
+        $relationships = get_model_relationships($modelInstance);
+
+        foreach ($relationships as $relationshipName => $relationship) {
+            //'make:filament-relation-manager {resource?} {relationship?} {recordTitleAttribute?} {--attach} {--associate} {--soft-deletes} {--view} {--F|force}';
+            Artisan::call('make:filament-relation-manager', [
+                'resource' => $modelClass,
+                'relationship' => $relationshipName,
+                'recordTitleAttribute' => 'id',
+                '--force' => true,
+            ]);
+        }
+
+        $pluralModelClass = (string)Str::of($modelClass)->pluralStudly();
         $resource = "{$model}Resource";
         $resourceClass = "{$modelClass}Resource";
         $resourceNamespace = $modelNamespace;
@@ -59,7 +75,7 @@ class MakeResourceCommand extends Command
         $viewResourcePageClass = "View{$modelClass}";
 
         $baseResourcePath =
-            (string) Str::of($resource)
+            (string)Str::of($resource)
                 ->prepend('/')
                 ->prepend($path)
                 ->replace('\\', '/')
@@ -73,21 +89,21 @@ class MakeResourceCommand extends Command
         $editResourcePagePath = "{$resourcePagesDirectory}/{$editResourcePageClass}.php";
         $viewResourcePagePath = "{$resourcePagesDirectory}/{$viewResourcePageClass}.php";
 
-        if (! $this->option('force') && $this->checkForCollision([
-            $resourcePath,
-            $listResourcePagePath,
-            $manageResourcePagePath,
-            $createResourcePagePath,
-            $editResourcePagePath,
-            $viewResourcePagePath,
-        ])) {
+        if (!$this->option('force') && $this->checkForCollision([
+                $resourcePath,
+                $listResourcePagePath,
+                $manageResourcePagePath,
+                $createResourcePagePath,
+                $editResourcePagePath,
+                $viewResourcePagePath,
+            ])) {
             return static::INVALID;
         }
 
         $pages = '';
         $pages .= '\'index\' => Pages\\' . ($this->option('simple') ? $manageResourcePageClass : $listResourcePageClass) . '::route(\'/\'),';
 
-        if (! $this->option('simple')) {
+        if (!$this->option('simple')) {
             $pages .= PHP_EOL . "'create' => Pages\\{$createResourcePageClass}::route('/create'),";
 
             if ($this->option('view')) {
@@ -118,7 +134,10 @@ class MakeResourceCommand extends Command
             $relations .= PHP_EOL . 'public static function getRelations(): array';
             $relations .= PHP_EOL . '{';
             $relations .= PHP_EOL . '    return [';
-            $relations .= PHP_EOL . '        //';
+            if (count($relationships) === 0) $relations .= PHP_EOL . '        //';
+            foreach ($relationships as $relationshipName => $relationship) {
+                $relations .= PHP_EOL . '        RelationManagers\\' . Str::studly($relationshipName) . 'RelationManager::class,';
+            }
             $relations .= PHP_EOL . '    ];';
             $relations .= PHP_EOL . '}' . PHP_EOL;
         }

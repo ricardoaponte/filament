@@ -5,6 +5,7 @@ namespace Filament\Tables\Commands\Concerns;
 use Doctrine\DBAL\Types;
 use Filament\Tables;
 use Illuminate\Support\Str;
+use function Filament\Support\get_column_property;
 
 trait CanGenerateTables
 {
@@ -25,6 +26,9 @@ trait CanGenerateTables
         $columns = [];
 
         foreach ($table->getColumns() as $column) {
+            if (get_column_property($column, 'hiddenInTable')?->hiddenInTable === true) {
+                continue;
+            }
             if ($column->getAutoincrement()) {
                 continue;
             }
@@ -77,7 +81,7 @@ trait CanGenerateTables
 
         foreach ($columns as $columnName => $columnData) {
             // Constructor
-            $output .= (string) Str::of($columnData['type'])->after('Filament\\');
+            $output .= (string)Str::of($columnData['type'])->after('Filament\\');
             $output .= '::make(\'';
             $output .= $columnName;
             $output .= '\')';
@@ -97,7 +101,7 @@ trait CanGenerateTables
             // Termination
             $output .= ',';
 
-            if (! (array_key_last($columns) === $columnName)) {
+            if (!(array_key_last($columns) === $columnName)) {
                 $output .= PHP_EOL;
             }
         }
