@@ -127,26 +127,10 @@ class MakeRelationManagerCommand extends Command
 
         $tableBulkActions = implode(PHP_EOL, $tableBulkActions);
 
-        $model = (string)Str::of($this->argument('model'))
-            ->studly()
-            ->beforeLast('Resource')
-            ->trim('/')
-            ->trim('\\')
-            ->trim(' ')
-            ->studly()
-            ->replace('/', '\\');
+        $model = (string)Str::of($this->argument('model'));
 
-        if (blank($model)) {
-            $model = 'Resource';
-        }
-
-        $modelClass = (string)Str::of($model)->afterLast('\\');
-        $modelNamespace = Str::of($model)->contains('\\') ?
-            (string)Str::of($model)->beforeLast('\\') :
-            '';
-
-
-        $formSchema = $this->indentString($this->getResourceFormSchema('App\\Models' . ($modelNamespace !== '' ? "\\{$modelNamespace}" : '') . '\\' . $modelClass,), 4);
+        $formSchema = $this->getResourceFormSchema($model);
+        $formSchema = $this->indentString($formSchema, 4);
 //        $formSchema = '';
         $this->copyStubToApp('RelationManager', $path, [
             'eloquentQuery' => $this->indentString($eloquentQuery, 1),
