@@ -60,7 +60,7 @@ trait CanGenerateForms
 
                     $componentData['type'] = $type = Forms\Components\Select::class;
                     $componentData['relationship'] = ["'{$guessedRelationshipName}", "{$guessedRelationshipTitleColumnName}'"];
-                    if (get_column_property($column, 'hiddenInForm')?->hiddenInForm === true) {
+                    if (get_column_property($column, 'hiddenOnForm')?->hiddenOnForm === true) {
                         $componentData['hidden'] = [];
                         $componentData['saveRelationshipsWhenHidden'] = [];
                     }

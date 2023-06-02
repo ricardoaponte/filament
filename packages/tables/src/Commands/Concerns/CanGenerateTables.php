@@ -26,7 +26,7 @@ trait CanGenerateTables
         $columns = [];
 
         foreach ($table->getColumns() as $column) {
-            if (get_column_property($column, 'hiddenInTable')?->hiddenInTable === true) {
+            if (get_column_property($column, 'hiddenOnTable')?->hiddenOnTable === true) {
                 continue;
             }
             if ($column->getAutoincrement()) {
