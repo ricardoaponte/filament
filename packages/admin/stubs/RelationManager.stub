@@ -28,7 +28,7 @@ class {{ managerClass }} extends RelationManager
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('{{ recordTitleAttribute }}'),
+{{ tableColumns }}
             ])
             ->filters([
 {{ tableFilters }}

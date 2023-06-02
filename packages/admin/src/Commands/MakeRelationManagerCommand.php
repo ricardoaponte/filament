@@ -7,6 +7,7 @@ use Filament\Support\Commands\Concerns\CanIndentStrings;
 use Filament\Support\Commands\Concerns\CanManipulateFiles;
 use Filament\Support\Commands\Concerns\CanReadModelSchemas;
 use Filament\Support\Commands\Concerns\CanValidateInput;
+use Filament\Tables\Commands\Concerns\CanGenerateTables;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
@@ -17,6 +18,7 @@ class MakeRelationManagerCommand extends Command
     use CanValidateInput;
     use CanGenerateForms;
     use CanReadModelSchemas;
+    use CanGenerateTables;
 
     protected $description = 'Create a new Filament relation manager class for a resource';
 
@@ -131,10 +133,14 @@ class MakeRelationManagerCommand extends Command
 
         $formSchema = $this->getResourceFormSchema($model);
         $formSchema = $this->indentString($formSchema, 4);
-//        $formSchema = '';
+
+        $tableColumns = $this->getResourceTableColumns($model);
+        $tableColumns = $this->indentString($tableColumns, 4);
+
         $this->copyStubToApp('RelationManager', $path, [
             'eloquentQuery' => $this->indentString($eloquentQuery, 1),
             'formSchema' => $formSchema,
+            'tableColumns' => $tableColumns,
             'namespace' => "{$resourceNamespace}\\{$resource}\\RelationManagers",
             'managerClass' => $managerClass,
             'recordTitleAttribute' => $recordTitleAttribute,
