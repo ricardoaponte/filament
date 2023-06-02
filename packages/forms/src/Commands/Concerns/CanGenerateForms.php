@@ -55,7 +55,8 @@ trait CanGenerateForms
                 $guessedRelationshipName = $this->guessBelongsToRelationshipName($column, $model);
 
                 if (filled($guessedRelationshipName)) {
-                    $guessedRelationshipTitleColumnName = $this->guessBelongsToRelationshipTitleColumnName($column, app($model)->{$guessedRelationshipName}()->getModel()::class);
+                    $modelClass = app($model)->{$guessedRelationshipName}()->getModel()::class;
+                    $guessedRelationshipTitleColumnName = $this->guessBelongsToRelationshipTitleColumnName($column, $modelClass);
 
                     $componentData['type'] = $type = Forms\Components\Select::class;
                     $componentData['relationship'] = ["'{$guessedRelationshipName}", "{$guessedRelationshipTitleColumnName}'"];
