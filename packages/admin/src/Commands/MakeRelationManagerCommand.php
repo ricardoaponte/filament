@@ -13,9 +13,9 @@ use Illuminate\Support\Str;
 
 class MakeRelationManagerCommand extends Command
 {
-    use CanIndentStrings;
     use CanGenerateForms;
     use CanGenerateTables;
+    use CanIndentStrings;
     use CanManipulateFiles;
     use CanReadModelSchemas;
     use CanValidateInput;
@@ -132,26 +132,9 @@ class MakeRelationManagerCommand extends Command
         $tableColumns = 'Tables\Columns\TextColumn::make(\'' . $recordTitleAttribute . '\')';
 
         if ($this->option('generate')) {
-            $model = (string)Str::of($relationship)
-                ->studly()
-                ->trim('/')
-                ->trim('\\')
-                ->trim(' ')
-                ->studly()
-                ->replace('/', '\\');
-
-            if (blank($model)) {
-                $model = 'Resource';
-            }
-
-            $modelClass = (string)Str::of($model)->afterLast('\\');
-            $modelNamespace = Str::of($model)->contains('\\') ?
-                (string)Str::of($model)->beforeLast('\\') :
-                '';
-            $modelName = 'App\\Models' . ($modelNamespace !== '' ? "\\{$modelNamespace}" : '') . '\\' . $modelClass;
-
-            $formSchema = $this->getResourceFormSchema($modelName);
-            $tableColumns = $this->getResourceTableColumns($modelName);
+            $model = (string)Str::of($relationship)->studly()->prepend('App\\Models' . '\\');
+            $formSchema = $this->getResourceFormSchema($model);
+            $tableColumns = $this->getResourceTableColumns($model);
         }
 
         $this->copyStubToApp('RelationManager', $path, [
