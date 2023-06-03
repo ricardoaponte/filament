@@ -4,7 +4,6 @@ namespace Filament\Support\Commands\Concerns;
 
 use Doctrine\DBAL\Schema\AbstractAsset;
 use Doctrine\DBAL\Schema\Table;
-use Doctrine\DBAL\Types;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -15,7 +14,7 @@ trait CanReadModelSchemas
 {
     protected function getModel(string $model): ?string
     {
-        if (!class_exists($model)) {
+        if (! class_exists($model)) {
             return null;
         }
 
@@ -45,36 +44,30 @@ trait CanReadModelSchemas
         $guessedRelationshipName = Str::of($column->getName())->beforeLast('_id');
         $hasRelationship = $modelReflection->reflected->hasMethod($guessedRelationshipName);
 
-        if (!$hasRelationship) {
+        if (! $hasRelationship) {
             $guessedRelationshipName = $guessedRelationshipName->camel();
             $hasRelationship = $modelReflection->reflected->hasMethod($guessedRelationshipName);
         }
 
-        if (!$hasRelationship) {
+        if (! $hasRelationship) {
             return null;
         }
 
         try {
+            $type = $modelReflection->reflected->getMethod($guessedRelationshipName)->getReturnType();
 
-            $method = $modelReflection->reflected->getMethod($guessedRelationshipName);
-            $methodReturnType = $method->getReturnType();
-            $columnTypeClass = $column->getType()::class;
-
-            if (!$method->hasReturnType() && ($columnTypeClass === Types\IntegerType::class || $columnTypeClass === Types\BigIntType::class)) {
-                return $guessedRelationshipName;
-            }
-
-            if (!$methodReturnType || !method_exists($methodReturnType, 'getName') || $methodReturnType->getName() !== BelongsTo::class) {
+            if (
+                (! $type) ||
+                (! method_exists($type, 'getName')) ||
+                ($type->getName() !== BelongsTo::class)
+            ) {
                 return null;
             }
-
-            return $guessedRelationshipName;
-
-
         } catch (ReflectionException $exception) {
             return null;
         }
 
+        return $guessedRelationshipName;
     }
 
     protected function guessBelongsToRelationshipTableName(AbstractAsset $column): ?string
@@ -85,7 +78,7 @@ trait CanReadModelSchemas
             return Str::plural($tableName);
         }
 
-        if (!Schema::hasTable($tableName)) {
+        if (! Schema::hasTable($tableName)) {
             return null;
         }
 

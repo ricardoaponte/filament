@@ -29,32 +29,32 @@ class MakeRelationManagerCommand extends Command
         $resourcePath = config('filament.resources.path', app_path('Filament/Resources/'));
         $resourceNamespace = config('filament.resources.namespace', 'App\\Filament\\Resources');
 
-        $resource = (string)Str::of($this->argument('resource') ?? $this->askRequired('Resource (e.g. `DepartmentResource`)', 'resource'))
+        $resource = (string) Str::of($this->argument('resource') ?? $this->askRequired('Resource (e.g. `DepartmentResource`)', 'resource'))
             ->studly()
             ->trim('/')
             ->trim('\\')
             ->trim(' ')
             ->replace('/', '\\');
 
-        if (!Str::of($resource)->endsWith('Resource')) {
+        if (! Str::of($resource)->endsWith('Resource')) {
             $resource .= 'Resource';
         }
 
-        $relationship = (string)Str::of($this->argument('relationship') ?? $this->askRequired('Relationship (e.g. `members`)', 'relationship'))
+        $relationship = (string) Str::of($this->argument('relationship') ?? $this->askRequired('Relationship (e.g. `members`)', 'relationship'))
             ->trim(' ');
-        $managerClass = (string)Str::of($relationship)
+        $managerClass = (string) Str::of($relationship)
             ->studly()
             ->append('RelationManager');
 
-        $recordTitleAttribute = (string)Str::of($this->argument('recordTitleAttribute') ?? $this->askRequired('Title attribute (e.g. `name`)', 'title attribute'))
+        $recordTitleAttribute = (string) Str::of($this->argument('recordTitleAttribute') ?? $this->askRequired('Title attribute (e.g. `name`)', 'title attribute'))
             ->trim(' ');
 
-        $path = (string)Str::of($managerClass)
-            ->prepend("$resourcePath/$resource/RelationManagers/")
+        $path = (string) Str::of($managerClass)
+            ->prepend("{$resourcePath}/{$resource}/RelationManagers/")
             ->replace('\\', '/')
             ->append('.php');
 
-        if (!$this->option('force') && $this->checkForCollision([
+        if (! $this->option('force') && $this->checkForCollision([
                 $path,
             ])) {
             return static::INVALID;
@@ -132,7 +132,7 @@ class MakeRelationManagerCommand extends Command
         $tableColumns = 'Tables\Columns\TextColumn::make(\'' . $recordTitleAttribute . '\')';
 
         if ($this->option('generate')) {
-            $model = (string)Str::of($relationship)->studly()->prepend('App\\Models' . '\\');
+            $model = (string) Str::of($relationship)->studly()->prepend('App\\Models' . '\\');
             $formSchema = $this->getResourceFormSchema($model);
             $tableColumns = $this->getResourceTableColumns($model);
         }

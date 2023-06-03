@@ -55,8 +55,7 @@ trait CanGenerateForms
                 $guessedRelationshipName = $this->guessBelongsToRelationshipName($column, $model);
 
                 if (filled($guessedRelationshipName)) {
-                    $modelClass = app($model)->{$guessedRelationshipName}()->getModel()::class;
-                    $guessedRelationshipTitleColumnName = $this->guessBelongsToRelationshipTitleColumnName($column, $modelClass);
+                    $guessedRelationshipTitleColumnName = $this->guessBelongsToRelationshipTitleColumnName($column, app($model)->{$guessedRelationshipName}()->getModel()::class);
 
                     $componentData['type'] = $type = Forms\Components\Select::class;
                     $componentData['relationship'] = ["'{$guessedRelationshipName}", "{$guessedRelationshipTitleColumnName}'"];
@@ -100,7 +99,7 @@ trait CanGenerateForms
 
         foreach ($components as $componentName => $componentData) {
             // Constructor
-            $output .= (string)Str::of($componentData['type'])->after('Filament\\');
+            $output .= (string) Str::of($componentData['type'])->after('Filament\\');
             $output .= '::make(\'';
             $output .= $componentName;
             $output .= '\')';
@@ -120,16 +119,11 @@ trait CanGenerateForms
             // Termination
             $output .= ',';
 
-            if (!(array_key_last($components) === $componentName)) {
+            if (! (array_key_last($components) === $componentName)) {
                 $output .= PHP_EOL;
             }
         }
 
         return $output;
-    }
-
-    protected function getResourceModel(string $model)
-    {
-        return $this->getModelTable($model);
     }
 }
