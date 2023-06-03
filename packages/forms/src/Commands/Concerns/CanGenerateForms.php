@@ -59,16 +59,18 @@ trait CanGenerateForms
 
                     $componentData['type'] = $type = Forms\Components\Select::class;
                     $componentData['relationship'] = ["'{$guessedRelationshipName}", "{$guessedRelationshipTitleColumnName}'"];
-                    if (get_column_property($column, 'hiddenOnForm')?->hiddenOnForm === true) {
-                        $componentData['hidden'] = [];
-                        $componentData['saveRelationshipsWhenHidden'] = [];
-                    }
-                    $columnProperty = get_column_property($column, 'default');
-                    if ($columnProperty?->default) {
-                        $componentData['default'] = [$columnProperty->default];
-                    }
                 }
             }
+
+            if (get_column_property($column, 'hiddenOnForm')?->hiddenOnForm === true) {
+                $componentData['hidden'] = [];
+                $componentData['saveRelationshipsWhenHidden'] = [];
+            }
+            $columnProperty = get_column_property($column, 'default');
+            if ($columnProperty?->default) {
+                $componentData['default'] = [$columnProperty->default];
+            }
+
 
             if ($type === Forms\Components\TextInput::class) {
                 if (Str::of($columnName)->contains(['email'])) {
