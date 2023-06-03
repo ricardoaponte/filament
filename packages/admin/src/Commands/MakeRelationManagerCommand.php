@@ -14,17 +14,16 @@ use Illuminate\Support\Str;
 class MakeRelationManagerCommand extends Command
 {
     use CanIndentStrings;
-    use CanManipulateFiles;
-    use CanValidateInput;
     use CanGenerateForms;
-    use CanReadModelSchemas;
     use CanGenerateTables;
+    use CanManipulateFiles;
+    use CanReadModelSchemas;
+    use CanValidateInput;
 
     protected $description = 'Create a new Filament relation manager class for a resource';
 
-    protected $signature = 'make:filament-relation-manager {resource?} {relationship?} {model?} {recordTitleAttribute?} {--attach} {--associate} {--soft-deletes} {--view} {--F|force}';
+    protected $signature = 'make:filament-relation-manager {resource?} {relationship?} {recordTitleAttribute?} {--attach} {--associate} {--generate} {--soft-deletes} {--view} {--F|force}';
 
-//    protected $signature = 'make:filament-relation-manager {resource?} {relationship?} {model?} {recordTitleAttribute?} {--attach} {--associate} {--soft-deletes} {--view} {--F|force}';
     public function handle(): int
     {
         $resourcePath = config('filament.resources.path', app_path('Filament/Resources/'));
@@ -51,7 +50,7 @@ class MakeRelationManagerCommand extends Command
             ->trim(' ');
 
         $path = (string)Str::of($managerClass)
-            ->prepend("{$resourcePath}/{$resource}/RelationManagers/")
+            ->prepend("$resourcePath/$resource/RelationManagers/")
             ->replace('\\', '/')
             ->append('.php');
 
@@ -129,19 +128,37 @@ class MakeRelationManagerCommand extends Command
 
         $tableBulkActions = implode(PHP_EOL, $tableBulkActions);
 
-        $model = (string)Str::of($this->argument('model'));
+        $formSchema = 'Forms\Components\TextInput::make(\'' . $recordTitleAttribute . '\')->required()->maxLength(255),';
+        $tableColumns = 'Tables\Columns\TextColumn::make(\'' . $recordTitleAttribute . '\')';
 
-        $formSchema = $this->getResourceFormSchema($model);
-        $formSchema = $this->indentString($formSchema, 4);
+        if ($this->option('generate')) {
+            $model = (string)Str::of($relationship)
+                ->studly()
+                ->trim('/')
+                ->trim('\\')
+                ->trim(' ')
+                ->studly()
+                ->replace('/', '\\');
 
-        $tableColumns = $this->getResourceTableColumns($model);
-        $tableColumns = $this->indentString($tableColumns, 4);
+            if (blank($model)) {
+                $model = 'Resource';
+            }
+
+            $modelClass = (string)Str::of($model)->afterLast('\\');
+            $modelNamespace = Str::of($model)->contains('\\') ?
+                (string)Str::of($model)->beforeLast('\\') :
+                '';
+            $modelName = 'App\\Models' . ($modelNamespace !== '' ? "\\{$modelNamespace}" : '') . '\\' . $modelClass;
+
+            $formSchema = $this->getResourceFormSchema($modelName);
+            $tableColumns = $this->getResourceTableColumns($modelName);
+        }
 
         $this->copyStubToApp('RelationManager', $path, [
-            'eloquentQuery' => $this->indentString($eloquentQuery, 1),
-            'formSchema' => $formSchema,
-            'tableColumns' => $tableColumns,
-            'namespace' => "{$resourceNamespace}\\{$resource}\\RelationManagers",
+            'eloquentQuery' => $this->indentString($eloquentQuery),
+            'formSchema' => $this->indentString($formSchema, 4),
+            'tableColumns' => $this->indentString($tableColumns, 4),
+            'namespace' => "$resourceNamespace\\$resource\\RelationManagers",
             'managerClass' => $managerClass,
             'recordTitleAttribute' => $recordTitleAttribute,
             'relationship' => $relationship,
@@ -154,9 +171,9 @@ class MakeRelationManagerCommand extends Command
             'tableHeaderActions' => $this->indentString($tableHeaderActions, 4),
         ]);
 
-        $this->info("Successfully created {$managerClass}!");
+        $this->info("Successfully created $managerClass!");
 
-        $this->info("Make sure to register the relation in `{$resource}::getRelations()`.");
+        $this->info("Make sure to register the relation in `$resource::getRelations()`.");
 
         return static::SUCCESS;
     }

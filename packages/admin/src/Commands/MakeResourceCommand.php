@@ -58,9 +58,9 @@ class MakeResourceCommand extends Command
             Artisan::call('make:filament-relation-manager', [
                 'resource' => $modelClass,
                 'relationship' => $relationshipName,
-                'model' => $relationship['model'],
                 'recordTitleAttribute' => 'id',
                 '--force' => true,
+                '--generate' => true,
             ]);
         }
 
