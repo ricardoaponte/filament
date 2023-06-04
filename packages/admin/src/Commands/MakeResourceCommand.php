@@ -50,18 +50,22 @@ class MakeResourceCommand extends Command
             '';
 
         $modelName = 'App\\Models' . ($modelNamespace !== '' ? "\\{$modelNamespace}" : '') . '\\' . $modelClass;
-        $modelInstance = new $modelName();
-        $relationships = get_model_relationships($modelInstance);
+        $relationships = [];
+        try {
+            $modelInstance = new $modelName();
+            $relationships = get_model_relationships($modelInstance);
 
-        foreach ($relationships as $relationshipName => $relationship) {
-            //'make:filament-relation-manager {resource?} {relationship?} {recordTitleAttribute?} {--attach} {--associate} {--soft-deletes} {--view} {--F|force}';
-            Artisan::call('make:filament-relation-manager', [
-                'resource' => $modelClass,
-                'relationship' => $relationshipName,
-                'recordTitleAttribute' => 'id',
-                '--force' => true,
-                '--generate' => true,
-            ]);
+            foreach ($relationships as $relationshipName => $relationship) {
+                Artisan::call('make:filament-relation-manager', [
+                    'resource' => $modelClass,
+                    'relationship' => $relationshipName,
+                    'recordTitleAttribute' => 'id',
+                    '--force' => true,
+                    '--generate' => true,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            $this->error($e->getMessage());
         }
 
         $pluralModelClass = (string) Str::of($modelClass)->pluralStudly();
