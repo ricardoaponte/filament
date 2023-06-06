@@ -53,10 +53,6 @@ class MakeResourceCommand extends Command
         // If the model doesn't exist, create it with copyStubToApp and require it
         if (! $this->getModel($modelName)) {
             $modelFilePath = app_path('Models/' . $model . '.php');
-            $this->copyStubToApp('Model', $modelFilePath, [
-                'class' => $model,
-                'namespace' => $modelNamespace,
-            ]);
             require_once $modelFilePath;
         }
         try {
