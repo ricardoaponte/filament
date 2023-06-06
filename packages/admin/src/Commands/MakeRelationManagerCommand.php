@@ -131,6 +131,7 @@ class MakeRelationManagerCommand extends Command
         $formSchema = 'Forms\Components\TextInput::make(\'' . $recordTitleAttribute . '\')->required()->maxLength(255),';
         $tableColumns = 'Tables\Columns\TextColumn::make(\'' . $recordTitleAttribute . '\')';
 
+        // TODO: Verify all other commands are using the same logic.
         if ($this->option('generate')) {
             $model = (string) Str::of($relationship)->studly()->prepend('App\\Models' . '\\');
             $formSchema = $this->getResourceFormSchema($model);

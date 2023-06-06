@@ -45,14 +45,22 @@ class MakeResourceCommand extends Command
         }
 
         $modelClass = (string) Str::of($model)->afterLast('\\');
-        $modelNamespace = Str::of($model)->contains('\\') ?
-            (string) Str::of($model)->beforeLast('\\') :
-            '';
+        $modelNamespace = 'App\\Models';
 
-        $modelName = 'App\\Models' . ($modelNamespace !== '' ? "\\{$modelNamespace}" : '') . '\\' . $modelClass;
+        $modelName = 'App\\Models\\' . $modelClass;
         $relationships = [];
+
+        // If the model doesn't exist, create it with copyStubToApp and require it
+        if (! $this->getModel($modelName)) {
+            $modelFilePath = app_path('Models/' . $model . '.php');
+            $this->copyStubToApp('Model', $modelFilePath, [
+                'class' => $model,
+                'namespace' => $modelNamespace,
+            ]);
+            require_once $modelFilePath;
+        }
         try {
-            $modelInstance = new $modelName();
+            $modelInstance = $this->getModel($modelName);
             $relationships = get_model_relationships($modelInstance);
 
             foreach ($relationships as $relationshipName => $relationship) {
@@ -96,13 +104,13 @@ class MakeResourceCommand extends Command
         $viewResourcePagePath = "{$resourcePagesDirectory}/{$viewResourcePageClass}.php";
 
         if (! $this->option('force') && $this->checkForCollision([
-            $resourcePath,
-            $listResourcePagePath,
-            $manageResourcePagePath,
-            $createResourcePagePath,
-            $editResourcePagePath,
-            $viewResourcePagePath,
-        ])) {
+                $resourcePath,
+                $listResourcePagePath,
+                $manageResourcePagePath,
+                $createResourcePagePath,
+                $editResourcePagePath,
+                $viewResourcePagePath,
+            ])) {
             return static::INVALID;
         }
 
