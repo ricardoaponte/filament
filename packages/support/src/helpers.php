@@ -5,6 +5,10 @@ namespace Filament\Support;
 use Illuminate\Support\Str;
 use Illuminate\Translation\MessageSelector;
 use Illuminate\View\ComponentAttributeBag;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use ReflectionClass;
+use ReflectionException;
+use ReflectionMethod;
 
 if (! function_exists('Filament\Support\get_model_label')) {
     function get_model_label(string $model): string
@@ -38,3 +42,49 @@ if (! function_exists('Filament\Support\prepare_inherited_attributes')) {
         return $attributes;
     }
 }
+
+if (! function_exists('Filament\Support\get_column_property')) {
+    function get_column_property($column, $property)
+    {
+        if (! $column->getComment()) {
+            return null;
+        }
+        try {
+            $properties = json_decode($column->getComment(), false, 512, JSON_THROW_ON_ERROR);
+        } catch (\Exception $e) {
+            throw new \Exception('Invalid JSON in column ' . $column->getName() . ' comment: ' . $column->getComment());
+        }
+        if ($properties && property_exists($properties, $property) && $properties->{$property} === true) {
+            return $properties;
+        }
+        return null;
+    }
+}
+
+if (! function_exists('Filament\Support\get_model_relationships')) {
+    function get_model_relationships($model): array
+    {
+        $relationships = [];
+        $methods = (new ReflectionClass($model))->getMethods(ReflectionMethod::IS_PUBLIC);
+        foreach ($methods as $method) {
+            if ($method->isStatic() || $method->getNumberOfParameters() > 0) {
+                continue;
+            }
+
+            try {
+                $return = $method->invoke($model);
+                if ($return instanceof Relation) {
+                    $relationships[$method->getName()] = [
+                        'type' => (new ReflectionClass($return))->getShortName(),
+                        'model' => (new ReflectionClass($return->getRelated()))->getName()
+                    ];
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
+        return $relationships;
+    }
+}
+
+

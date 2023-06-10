@@ -2,21 +2,27 @@
 
 namespace Filament\Commands;
 
+use Filament\Forms\Commands\Concerns\CanGenerateForms;
 use Filament\Support\Commands\Concerns\CanIndentStrings;
 use Filament\Support\Commands\Concerns\CanManipulateFiles;
+use Filament\Support\Commands\Concerns\CanReadModelSchemas;
 use Filament\Support\Commands\Concerns\CanValidateInput;
+use Filament\Tables\Commands\Concerns\CanGenerateTables;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
 class MakeRelationManagerCommand extends Command
 {
+    use CanGenerateForms;
+    use CanGenerateTables;
     use CanIndentStrings;
     use CanManipulateFiles;
+    use CanReadModelSchemas;
     use CanValidateInput;
 
     protected $description = 'Create a new Filament relation manager class for a resource';
 
-    protected $signature = 'make:filament-relation-manager {resource?} {relationship?} {recordTitleAttribute?} {--attach} {--associate} {--soft-deletes} {--view} {--F|force}';
+    protected $signature = 'make:filament-relation-manager {resource?} {relationship?} {recordTitleAttribute?} {--attach} {--associate} {--generate} {--soft-deletes} {--view} {--F|force}';
 
     public function handle(): int
     {
@@ -49,8 +55,8 @@ class MakeRelationManagerCommand extends Command
             ->append('.php');
 
         if (! $this->option('force') && $this->checkForCollision([
-            $path,
-        ])) {
+                $path,
+            ])) {
             return static::INVALID;
         }
 
@@ -122,9 +128,21 @@ class MakeRelationManagerCommand extends Command
 
         $tableBulkActions = implode(PHP_EOL, $tableBulkActions);
 
+        $formSchema = 'Forms\Components\TextInput::make(\'' . $recordTitleAttribute . '\')->required()->maxLength(255),';
+        $tableColumns = 'Tables\Columns\TextColumn::make(\'' . $recordTitleAttribute . '\')';
+
+        // TODO: Verify all other commands are using the same logic.
+        if ($this->option('generate')) {
+            $model = (string) Str::of($relationship)->studly()->prepend('App\\Models' . '\\');
+            $formSchema = $this->getResourceFormSchema($model);
+            $tableColumns = $this->getResourceTableColumns($model);
+        }
+
         $this->copyStubToApp('RelationManager', $path, [
-            'eloquentQuery' => $this->indentString($eloquentQuery, 1),
-            'namespace' => "{$resourceNamespace}\\{$resource}\\RelationManagers",
+            'eloquentQuery' => $this->indentString($eloquentQuery),
+            'formSchema' => $this->indentString($formSchema, 4),
+            'tableColumns' => $this->indentString($tableColumns, 4),
+            'namespace' => "$resourceNamespace\\$resource\\RelationManagers",
             'managerClass' => $managerClass,
             'recordTitleAttribute' => $recordTitleAttribute,
             'relationship' => $relationship,

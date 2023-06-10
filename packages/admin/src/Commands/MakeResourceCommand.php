@@ -9,7 +9,9 @@ use Filament\Support\Commands\Concerns\CanReadModelSchemas;
 use Filament\Support\Commands\Concerns\CanValidateInput;
 use Filament\Tables\Commands\Concerns\CanGenerateTables;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
+use function Filament\Support\get_model_relationships;
 
 class MakeResourceCommand extends Command
 {
@@ -43,9 +45,33 @@ class MakeResourceCommand extends Command
         }
 
         $modelClass = (string) Str::of($model)->afterLast('\\');
-        $modelNamespace = Str::of($model)->contains('\\') ?
-            (string) Str::of($model)->beforeLast('\\') :
-            '';
+        $modelNamespace = 'App\\Models';
+
+        $modelName = 'App\\Models\\' . $modelClass;
+        $relationships = [];
+
+        // If the model doesn't exist, create it with copyStubToApp and require it
+        if (! $this->getModel($modelName)) {
+            $modelFilePath = app_path('Models/' . $model . '.php');
+            require_once $modelFilePath;
+        }
+        try {
+            $modelInstance = $this->getModel($modelName);
+            $relationships = get_model_relationships($modelInstance);
+
+            foreach ($relationships as $relationshipName => $relationship) {
+                Artisan::call('make:filament-relation-manager', [
+                    'resource' => $modelClass,
+                    'relationship' => $relationshipName,
+                    'recordTitleAttribute' => 'id',
+                    '--force' => true,
+                    '--generate' => true,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            $this->error($e->getMessage());
+        }
+
         $pluralModelClass = (string) Str::of($modelClass)->pluralStudly();
 
         $resource = "{$model}Resource";
@@ -74,13 +100,13 @@ class MakeResourceCommand extends Command
         $viewResourcePagePath = "{$resourcePagesDirectory}/{$viewResourcePageClass}.php";
 
         if (! $this->option('force') && $this->checkForCollision([
-            $resourcePath,
-            $listResourcePagePath,
-            $manageResourcePagePath,
-            $createResourcePagePath,
-            $editResourcePagePath,
-            $viewResourcePagePath,
-        ])) {
+                $resourcePath,
+                $listResourcePagePath,
+                $manageResourcePagePath,
+                $createResourcePagePath,
+                $editResourcePagePath,
+                $viewResourcePagePath,
+            ])) {
             return static::INVALID;
         }
 
@@ -118,7 +144,10 @@ class MakeResourceCommand extends Command
             $relations .= PHP_EOL . 'public static function getRelations(): array';
             $relations .= PHP_EOL . '{';
             $relations .= PHP_EOL . '    return [';
-            $relations .= PHP_EOL . '        //';
+            if (count($relationships) === 0) $relations .= PHP_EOL . '        //';
+            foreach ($relationships as $relationshipName => $relationship) {
+                $relations .= PHP_EOL . '        RelationManagers\\' . Str::studly($relationshipName) . 'RelationManager::class,';
+            }
             $relations .= PHP_EOL . '    ];';
             $relations .= PHP_EOL . '}' . PHP_EOL;
         }

@@ -5,6 +5,7 @@ namespace Filament\Forms\Commands\Concerns;
 use Doctrine\DBAL\Types;
 use Filament\Forms;
 use Illuminate\Support\Str;
+use function Filament\Support\get_column_property;
 
 trait CanGenerateForms
 {
@@ -60,6 +61,16 @@ trait CanGenerateForms
                     $componentData['relationship'] = ["'{$guessedRelationshipName}", "{$guessedRelationshipTitleColumnName}'"];
                 }
             }
+
+            if (get_column_property($column, 'hiddenOnForm')?->hiddenOnForm === true) {
+                $componentData['hidden'] = [];
+                $componentData['saveRelationshipsWhenHidden'] = [];
+            }
+            $columnProperty = get_column_property($column, 'default');
+            if ($columnProperty?->default) {
+                $componentData['default'] = [$columnProperty->default];
+            }
+
 
             if ($type === Forms\Components\TextInput::class) {
                 if (Str::of($columnName)->contains(['email'])) {

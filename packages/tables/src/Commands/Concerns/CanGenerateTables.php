@@ -5,6 +5,7 @@ namespace Filament\Tables\Commands\Concerns;
 use Doctrine\DBAL\Types;
 use Filament\Tables;
 use Illuminate\Support\Str;
+use function Filament\Support\get_column_property;
 
 trait CanGenerateTables
 {
@@ -25,6 +26,9 @@ trait CanGenerateTables
         $columns = [];
 
         foreach ($table->getColumns() as $column) {
+            if (get_column_property($column, 'hiddenOnTable')?->hiddenOnTable === true) {
+                continue;
+            }
             if ($column->getAutoincrement()) {
                 continue;
             }
